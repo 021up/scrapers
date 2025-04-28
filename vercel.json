@@ -5,8 +5,8 @@
             "src": "main.py",
             "use": "@vercel/python",
             "config": {
-                "maxLambdaSize": "15mb",
-                "buildCommand": "pip install -r requirements.txt && pip install playwright && PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright-browsers playwright install chromium && chmod -R 777 /tmp/playwright-browsers && uvicorn main:app --host 0.0.0.0 --port $PORT"
+                "maxLambdaSize": "50mb",
+                "buildCommand": "pip install -r requirements.txt && pip install playwright && PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright-browsers playwright install chromium && chmod -R 777 /tmp/playwright-browsers"
             }
         }
     ],
