@@ -6,7 +6,7 @@
             "use": "@vercel/python",
             "config": {
                 "maxLambdaSize": "15mb",
-                "buildCommand": "pip install playwright && playwright install chromium"
+                "buildCommand": "pip install playwright && PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright-browsers playwright install chromium"
             }
         }
     ],
@@ -17,6 +17,7 @@
         }
     ],
     "env": {
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright-browsers"
     }
 }
