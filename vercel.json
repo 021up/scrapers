@@ -18,6 +18,9 @@
     ],
     "env": {
         "PYTHONUNBUFFERED": "1",
-        "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright-browsers"
+        "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright-browsers",
+        "PYTHON_VERSION": "3.9",
+        "PORT": "8000",
+        "NODE_VERSION": "18"
     }
 }
