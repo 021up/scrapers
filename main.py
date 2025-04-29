@@ -1,16 +1,17 @@
 import os
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from scraper_base import ScraperBase
+from generic_scraper import GenericScraper
 
 # 創建FastAPI應用
 app = FastAPI(
     title="網站爬蟲API",
-    description="提供多個網站的爬蟲服務API，包含Accupass等網站的活動資訊爬取功能",
+    description="提供多個網站的爬蟲服務API，包含各大活動平台的活動資訊爬取功能",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -39,6 +40,16 @@ class ScrapeRequest(BaseModel):
     url: Optional[str] = None
     params: Optional[Dict[str, str]] = None
 
+class GenericScrapeRequest(BaseModel):
+    """通用爬蟲請求模型
+    
+    Attributes:
+        url: 要爬取的網頁URL
+        params: 可選的URL參數
+    """    
+    url: str
+    params: Optional[Dict[str, str]] = None
+
 class ScrapeResponse(BaseModel):
     """爬蟲響應模型
     
@@ -52,7 +63,7 @@ class ScrapeResponse(BaseModel):
         message: 執行結果描述
     """    
     status: str
-    data: List[Dict[str, str]]
+    data: List[Dict[str, Any]]
     message: Optional[str] = None
 
 @app.get("/")
@@ -69,7 +80,10 @@ async def root():
     {"message": "歡迎使用網站爬蟲API"}
     ```
     """
-    return {"message": "歡迎使用網站爬蟲API"}
+    return JSONResponse(
+        content={"message": "歡迎使用網站爬蟲API"},
+        media_type="application/json; charset=utf-8"
+    )
 
 @app.post("/scrape", response_model=ScrapeResponse, tags=["爬蟲"])
 async def scrape(request: ScrapeRequest):
@@ -86,7 +100,7 @@ async def scrape(request: ScrapeRequest):
     ```bash
     curl -X POST http://localhost:8000/scrape \
         -H "Content-Type: application/json" \
-        -d '{"site": "accupass"}'
+        -d '{"site": "eventsite"}'
     ```
     
     2. 帶參數的爬蟲請求:
@@ -94,7 +108,7 @@ async def scrape(request: ScrapeRequest):
     curl -X POST http://localhost:8000/scrape \
         -H "Content-Type: application/json" \
         -d '{
-            "site": "accupass",
+            "site": "eventsite",
             "params": {
                 "p": "free",
                 "t": "next-week"
@@ -107,8 +121,8 @@ async def scrape(request: ScrapeRequest):
     curl -X POST http://localhost:8000/scrape \
         -H "Content-Type: application/json" \
         -d '{
-            "site": "accupass",
-            "url": "https://www.accupass.com/search/1/0/0/0/1/0/",
+            "site": "eventsite",
+            "url": "https://www.eventsite.com/search",
             "params": {
                 "q": "python"
             }
@@ -122,7 +136,7 @@ async def scrape(request: ScrapeRequest):
     # URL: http://localhost:8000/scrape
     # Headers: {"Content-Type": "application/json"}
     # Body: {
-    #   "site": "accupass",
+    #   "site": "eventsite",
     #   "params": {
     #     "p": "free",
     #     "t": "next-week"
@@ -133,7 +147,7 @@ async def scrape(request: ScrapeRequest):
     範例請求:
         ```json
         {
-            "site": "accupass",
+            "site": "eventsite",
             "params": {
                 "p": "free",
                 "t": "next-week"
@@ -153,7 +167,7 @@ async def scrape(request: ScrapeRequest):
                     "location": "活動地點"
                 }
             ],
-            "message": "成功從 accupass 抓取 1 條數據"
+            "message": "成功從 eventsite 抓取 1 條數據"
         }
         ```
     """
@@ -175,10 +189,15 @@ async def scrape(request: ScrapeRequest):
             params=request.params
         )
         
-        return ScrapeResponse(
+        response = ScrapeResponse(
             status="success",
             data=results,
             message=f"成功從 {request.site} 抓取 {len(results)} 條數據"
+        )
+        
+        return JSONResponse(
+            content=response.dict(),
+            media_type="application/json; charset=utf-8"
         )
         
     except Exception as e:
@@ -188,7 +207,88 @@ async def scrape(request: ScrapeRequest):
                 "status": "error",
                 "message": str(e),
                 "data": []
+            },
+            media_type="application/json; charset=utf-8"
+        )
+
+@app.post("/scrape_url", response_model=ScrapeResponse, tags=["爬蟲"])
+async def scrape_url(request: GenericScrapeRequest):
+    """爬取任意URL的網頁內容
+    
+    Args:
+        request: 包含目標URL和參數的請求對象
+        
+    Returns:
+        ScrapeResponse: 包含爬取結果的響應對象
+        
+    使用curl命令示例:
+    ```bash
+    curl -X POST http://localhost:8000/scrape_url \
+        -H "Content-Type: application/json" \
+        -d '{
+            "url": "https://example.com"
+        }'
+    ```
+    
+    範例請求:
+        ```json
+        {
+            "url": "https://example.com",
+            "params": {
+                "q": "search_term"
             }
+        }
+        ```
+    
+    範例響應:
+        ```json
+        {
+            "status": "success",
+            "data": [
+                {
+                    "url": "https://example.com",
+                    "title": "網頁標題",
+                    "html": "<html>...</html>",
+                    "metadata": {
+                        "description": "網頁描述",
+                        "keywords": "關鍵詞"
+                    }
+                }
+            ],
+            "message": "成功爬取網頁內容"
+        }
+        ```
+    """
+    try:
+        # 創建通用爬蟲實例
+        scraper = GenericScraper()
+        
+        # 執行爬蟲
+        results = await scraper.scrape(
+            url=request.url,
+            params=request.params
+        )
+        
+        response = ScrapeResponse(
+            status="success",
+            data=results,
+            message=f"成功爬取網頁內容"
+        )
+        
+        return JSONResponse(
+            content=response.dict(),
+            media_type="application/json; charset=utf-8"
+        )
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": str(e),
+                "data": []
+            },
+            media_type="application/json; charset=utf-8"
         )
 
 @app.get("/sites")
@@ -202,13 +302,16 @@ def get_available_sites():
     
     響應示例:
     ```json
-    {"sites": ["accupass"]}
+    {"sites": ["eventsite"]}
     ```
     """
     # 從配置文件中讀取支持的網站
     scraper = ScraperBase('default')
     sites = list(scraper.config['sites'].keys())
-    return {"sites": sites}
+    return JSONResponse(
+        content={"sites": sites},
+        media_type="application/json; charset=utf-8"
+    )
 
 if __name__ == "__main__":
     import uvicorn
