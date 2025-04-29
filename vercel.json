@@ -6,7 +6,7 @@
             "use": "@vercel/python",
             "config": {
                 "maxLambdaSize": "50mb",
-                "buildCommand": "pip install -r requirements.txt && pip install playwright && PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright-browsers playwright install chromium && chmod -R 777 /tmp/playwright-browsers"
+                "buildCommand": "pip install -r requirements.txt && pip install playwright && PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright-browsers playwright install chromium --with-deps && chmod -R 777 /tmp/playwright-browsers"
             }
         }
     ],
@@ -21,6 +21,9 @@
         "PLAYWRIGHT_BROWSERS_PATH": "/tmp/playwright-browsers",
         "PYTHON_VERSION": "3.9",
         "PORT": "8000",
-        "NODE_VERSION": "18"
+        "NODE_VERSION": "18",
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
+        "PLAYWRIGHT_BROWSERS_PATH_PREFIX": "/tmp",
+        "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH": "/tmp/playwright-browsers/chromium-*/chrome-linux/chrome"
     }
 }

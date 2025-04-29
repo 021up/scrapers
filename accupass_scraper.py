@@ -2,6 +2,7 @@ import asyncio
 from typing import Dict, List, Optional
 from playwright.async_api import async_playwright
 from scraper_base import ScraperBase
+from playwright_config import get_optimized_browser_config
 
 class AccupassScraper(ScraperBase):
     """Accupass網站爬蟲實現"""
@@ -24,8 +25,8 @@ class AccupassScraper(ScraperBase):
         self.logger.info(f'開始抓取: {target_url}')
         
         async with async_playwright() as p:
-            # 啟動瀏覽器
-            browser = await p.chromium.launch(headless=True)
+            # 啟動瀏覽器，使用優化配置
+            browser = await p.chromium.launch(**get_optimized_browser_config())
             page = await browser.new_page()
             
             try:
@@ -49,21 +50,45 @@ class AccupassScraper(ScraperBase):
                     raise Exception('無法找到活動卡片')
                 
                 # 滾動加載更多內容
-                no_new_content_count = 0
-                while no_new_content_count < 3:
+                self.logger.info('開始滾動加載更多內容...')
+                last_count = 0
+                consecutive_same_count = 0
+                max_consecutive_same = 5  # 連續5次相同數量才確定真的沒有更多內容
+                scroll_count = 0
+                
+                while True:
                     # 滾動到底部
                     await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(3)  # 增加等待時間，確保內容有足夠時間加載
                     
                     # 檢查新內容
-                    old_count = await page.evaluate(f"document.querySelectorAll('{card_selector}').length")
-                    await asyncio.sleep(1)
-                    new_count = await page.evaluate(f"document.querySelectorAll('{card_selector}').length")
+                    current_count = await page.evaluate(f"document.querySelectorAll('{card_selector}').length")
+                    scroll_count += 1
                     
-                    if new_count <= old_count:
-                        no_new_content_count += 1
+                    self.logger.info(f'滾動 {scroll_count} 次，當前項目數: {current_count}')
+                    
+                    if current_count == last_count:
+                        consecutive_same_count += 1
+                        self.logger.info(f'連續 {consecutive_same_count} 次沒有新內容')
+                        
+                        # 嘗試點擊「載入更多」按鈕（如果存在）
+                        try:
+                            load_more_button = await page.query_selector('button.load-more, .btn-load-more, a.more')
+                            if load_more_button:
+                                await load_more_button.click()
+                                await asyncio.sleep(3)
+                                self.logger.info('點擊了「載入更多」按鈕')
+                        except Exception as e:
+                            self.logger.debug(f'沒有找到或無法點擊載入更多按鈕: {e}')
+                        
+                        if consecutive_same_count >= max_consecutive_same:
+                            self.logger.info('已達到頁面底部，停止滾動')
+                            break
                     else:
-                        no_new_content_count = 0
+                        consecutive_same_count = 0
+                        self.logger.info(f'發現新內容: {current_count - last_count} 個')
+                    
+                    last_count = current_count
                 
                 # 提取活動信息
                 events = []
