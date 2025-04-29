@@ -30,7 +30,7 @@ class ScrapeRequest(BaseModel):
     """爬蟲請求模型
     
     Attributes:
-        site: 目標網站代號，例如 'accupass'
+        site: 目標網站代號，例如 'example'
         url: 可選的自定義URL，如果不提供則使用預設搜索頁面
         params: 可選的URL參數，用於過濾結果
             - p: 價格類型 (free: 免費)

@@ -8,23 +8,19 @@ default:
 
 # 網站特定設置
 sites:
-  accupass:
-    base_url: "https://www.accupass.com"
+  # 網站配置範例
+  example:
+    base_url: "https://example.com"
     search_path: "/search"
     default_params:
       p: "free"  # 免費活動
       s: "relevance"  # 按相關度排序
       t: "next-week"  # 下週活動
     selectors:
-      card: [".browse-event-card", ".event-list-item", "[class*=\"event-card\"]"]  # 活動卡片選擇器
-      title: [".browse-event-card-title", "[class*='title']", "h2", "h3", "h4"]  # 標題選擇器
-      time: [".browse-event-card-info", "[class*='time']", "[class*='date']"]  # 時間選擇器
-      location: [".browse-event-card-info:nth-child(2)", "[class*='location']", "[class*='place']"]  # 地點選擇器
+      card: [".card", ".item", "[class*=\"event-card\"]"]  # 活動卡片選擇器
+      title: [".title", "[class*='title']", "h2", "h3", "h4"]  # 標題選擇器
+      time: [".time", "[class*='time']", "[class*='date']"]  # 時間選擇器
+      location: [".location", "[class*='location']", "[class*='place']"]  # 地點選擇器
       link: "a"  # 連結選擇器
 
   # 可以添加更多網站的配置
-  # example:
-  #   base_url: "https://example.com"
-  #   selectors:
-  #     card: ".card"
-  #     title: ".title"
