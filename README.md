@@ -127,36 +127,81 @@ POST /scrape_url
 
    設定完成後，使用產生的公開URL替換n8n中的 `http://your-api-host:8000`。
 
-## 部署到Vercel
+## 部署到Linux虛擬機
 
-1. 安裝Vercel CLI：
-```bash
-npm i -g vercel
-```
+1. 準備Linux虛擬機環境：
+   - 確保已安裝Python 3.8+
+   - 安裝必要的系統依賴：
+   ```bash
+   sudo apt update
+   sudo apt install -y python3-pip python3-venv
+   sudo apt install -y libx11-xcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libglib2.0-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 libnss3
+   ```
 
-2. 設定vercel.json：
-```json
-{
-    "version": 2,
-    "builds": [
-        {
-            "src": "main.py",
-            "use": "@vercel/python"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "main.py"
-        }
-    ]
-}
-```
+2. 複製專案到伺服器：
+   ```bash
+   git clone <repository-url>
+   cd web-scrapers
+   ```
 
-3. 部署：
-```bash
-vercel
-```
+3. 設定虛擬環境並安裝依賴：
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   python -m playwright install chromium
+   ```
+
+4. 使用Screen或Tmux保持服務在背景運行：
+   ```bash
+   # 安裝screen
+   sudo apt install -y screen
+   
+   # 創建新的screen會話
+   screen -S scraper-api
+   
+   # 在screen中啟動服務
+   python main.py
+   ```
+   
+   按下 `Ctrl+A` 然後按 `D` 可以分離screen會話，讓服務在背景運行。
+   使用 `screen -r scraper-api` 可以重新連接到會話。
+
+5. 設定防火牆允許API端口：
+   ```bash
+   sudo ufw allow 8000
+   ```
+
+6. 使用Nginx作為反向代理（可選但推薦）：
+   ```bash
+   sudo apt install -y nginx
+   
+   # 創建Nginx配置
+   sudo nano /etc/nginx/sites-available/scraper-api
+   ```
+   
+   配置內容：
+   ```
+   server {
+       listen 80;
+       server_name your-domain.com;
+       
+       location / {
+           proxy_pass http://localhost:8000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+   
+   啟用配置：
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/scraper-api /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl restart nginx
+   ```
 
 ## 擴展新網站
 
@@ -306,36 +351,81 @@ When integrating this scraper service with n8n, you need to ensure:
 
    After setup, replace `http://your-api-host:8000` in n8n with the generated public URL.
 
-## Deployment to Vercel
+## Deployment to Linux VM
 
-1. Install Vercel CLI:
-```bash
-npm i -g vercel
-```
+1. Prepare Linux VM environment:
+   - Ensure Python 3.8+ is installed
+   - Install necessary system dependencies:
+   ```bash
+   sudo apt update
+   sudo apt install -y python3-pip python3-venv
+   sudo apt install -y libx11-xcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libglib2.0-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 libnss3
+   ```
 
-2. Configure vercel.json:
-```json
-{
-    "version": 2,
-    "builds": [
-        {
-            "src": "main.py",
-            "use": "@vercel/python"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "main.py"
-        }
-    ]
-}
-```
+2. Copy the project to the server:
+   ```bash
+   git clone <repository-url>
+   cd web-scrapers
+   ```
 
-3. Deploy:
-```bash
-vercel
-```
+3. Set up virtual environment and install dependencies:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   python -m playwright install chromium
+   ```
+
+4. Use Screen or Tmux to keep the service running in the background:
+   ```bash
+   # Install screen
+   sudo apt install -y screen
+   
+   # Create a new screen session
+   screen -S scraper-api
+   
+   # Start the service in the screen session
+   python main.py
+   ```
+   
+   Press `Ctrl+A` then `D` to detach the screen session, allowing the service to run in the background.
+   Use `screen -r scraper-api` to reconnect to the session.
+
+5. Configure firewall to allow the API port:
+   ```bash
+   sudo ufw allow 8000
+   ```
+
+6. Use Nginx as a reverse proxy (optional but recommended):
+   ```bash
+   sudo apt install -y nginx
+   
+   # Create Nginx configuration
+   sudo nano /etc/nginx/sites-available/scraper-api
+   ```
+   
+   Configuration content:
+   ```
+   server {
+       listen 80;
+       server_name your-domain.com;
+       
+       location / {
+           proxy_pass http://localhost:8000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+   
+   Enable the configuration:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/scraper-api /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl restart nginx
+   ```
 
 ## Extending with New Websites
 
