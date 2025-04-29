@@ -30,7 +30,7 @@ class ScrapeRequest(BaseModel):
     """爬蟲請求模型
     
     Attributes:
-        site: 目標網站代號，例如 'example'
+        site: 目標網站代號，例如 'accupass'
         url: 可選的自定義URL，如果不提供則使用預設搜索頁面
         params: 可選的URL參數，用於過濾結果
             - p: 價格類型 (free: 免費)
@@ -172,16 +172,33 @@ async def scrape(request: ScrapeRequest):
         ```
     """
     try:
-        # 動態導入對應的爬蟲模組
+        # 檢查網站是否在配置中
+        scraper_base = ScraperBase('default')
+        available_sites = scraper_base.config['sites'].keys()
+        
+        if request.site not in available_sites:
+            raise HTTPException(status_code=400, detail=f"不支持的網站: {request.site}，可用的網站有: {', '.join(available_sites)}")
+        
+        # 嘗試動態導入對應的爬蟲模組
         module_name = f"{request.site}_scraper"
         try:
+            # 嘗試導入特定網站的爬蟲模組
             scraper_module = __import__(module_name)
             scraper_class = getattr(scraper_module, f"{request.site.capitalize()}Scraper")
+            scraper = scraper_class()
         except (ImportError, AttributeError) as e:
-            raise HTTPException(status_code=400, detail=f"不支持的網站: {request.site}")
-        
-        # 創建爬蟲實例
-        scraper = scraper_class()
+            # 如果特定網站的爬蟲模組不存在，使用通用爬蟲
+            scraper = GenericScraper()
+            # 從配置中獲取網站的基礎URL
+            site_config = scraper_base.config['sites'].get(request.site, {})
+            base_url = site_config.get('base_url', '')
+            search_path = site_config.get('search_path', '')
+            
+            # 如果用戶沒有提供URL，則使用配置中的URL
+            if not request.url and base_url:
+                request.url = base_url
+                if search_path:
+                    request.url = f"{base_url}{search_path}"
         
         # 執行爬蟲
         results = await scraper.scrape(
@@ -200,6 +217,9 @@ async def scrape(request: ScrapeRequest):
             media_type="application/json; charset=utf-8"
         )
         
+    except HTTPException as e:
+        # 直接重新拋出HTTP異常
+        raise e
     except Exception as e:
         return JSONResponse(
             status_code=500,
